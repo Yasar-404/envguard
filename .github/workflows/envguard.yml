@@ -1,0 +1,25 @@
+# Runs EnvGuard against this repository. Copy it to your own project and replace
+# `pip install .` with `pip install envguard` once the package is published.
+name: EnvGuard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # --history needs the full commit graph
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install .
+      # Findings are printed masked; the exit code (1) fails the job.
+      - run: envguard scan . --history
