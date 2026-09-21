@@ -21,6 +21,7 @@ All notable changes are documented here. The format follows
 - Baseline files: `--write-baseline`, `--baseline` and a `baseline` config option. Findings are
   fingerprinted from rule, file and a hash of the secret; the JSON summary gains `baselined`.
 - `--staged` mode and a `.pre-commit-hooks.yaml` manifest to block commits that add secrets.
+- `--format sarif` for SARIF 2.1.0 output; `--format text|json|sarif` with `--json` kept as a shorthand.
 
 ### Fixed
 

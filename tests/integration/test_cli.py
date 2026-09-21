@@ -154,3 +154,34 @@ def test_installed_entry_point_via_python_dash_m(clean_project):
     )
     assert proc.returncode == 0
     assert "EnvGuard Security Scanner" in proc.stdout
+
+
+class TestFormats:
+    def test_sarif_report_for_findings(self, leaky_project, capsys):
+        code, out, err = run(capsys, "scan", str(leaky_project), "--format", "sarif")
+        doc = json.loads(out)
+        assert code == 1
+        assert err == ""
+        uris = {
+            r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+            for r in doc["runs"][0]["results"]
+        }
+        assert uris == {"src/config.py", "deploy/.env"}
+        for secret in (fake.aws_access_key(), fake.stripe_key(), fake.generic_secret()):
+            assert secret not in out
+
+    def test_sarif_report_for_a_clean_project_exits_with_0(self, clean_project, capsys):
+        code, out, _ = run(capsys, "scan", str(clean_project), "--format", "sarif")
+        assert code == 0
+        assert json.loads(out)["runs"][0]["results"] == []
+
+    def test_json_flag_is_shorthand_for_format_json(self, leaky_project, capsys):
+        _, short, _ = run(capsys, "scan", str(leaky_project), "--json")
+        _, long, _ = run(capsys, "scan", str(leaky_project), "--format", "json")
+        assert short == long
+        assert json.loads(short)["version"] == "1"
+
+    def test_unknown_format_is_a_usage_error(self, clean_project):
+        with pytest.raises(SystemExit) as raised:
+            main(["scan", str(clean_project), "--format", "xml"])
+        assert raised.value.code == 2

@@ -55,6 +55,7 @@ envguard scan .                      # scan the working tree
 envguard scan ./src                  # scan a subdirectory
 envguard scan path/to/file.env       # scan one file
 envguard scan . --json               # machine-readable output
+envguard scan . --format sarif       # SARIF 2.1.0 for code scanning tools
 envguard scan . --severity high      # only report HIGH findings
 envguard scan . --exclude node_modules --exclude "*.svg"
 envguard scan . --history            # also scan lines added in Git history
@@ -228,6 +229,54 @@ $ envguard scan . --json
 The schema is versioned and documented in [docs/json-format.md](docs/json-format.md). The
 complete secret never appears in it.
 
+## SARIF output
+
+`--format sarif` writes a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/) report
+that GitHub code scanning and other SARIF viewers understand. `--json` remains a shorthand
+for `--format json`.
+
+| EnvGuard         | SARIF                                                                  |
+| ---------------- | ---------------------------------------------------------------------- |
+| rule             | `tool.driver.rules[]`, with the remediation as `help` and a `security-severity` |
+| high / medium / low | result `level` `error` / `warning` / `note`                         |
+| file, line       | `physicalLocation` with a percent-encoded relative `uri` and `startLine` |
+| masked value     | in the message and `properties.maskedValue`                            |
+| confidence, commit | `properties.confidence`, `properties.commit`                         |
+
+Every rule is listed in the report whether or not it fired. The report contains only masked
+values, and no fingerprints: EnvGuard does not emit `partialFingerprints`, so GitHub derives
+its own de-duplication hash from file contents, and no hash of a secret leaves your machine.
+
+Paths are relative to the scanned directory, and code scanning expects paths relative to the
+repository root, so scan from the root (`envguard scan .`). Locations of `--history` findings
+refer to the commit that added the secret and may not exist in the checked-out tree.
+
+To upload results to GitHub code scanning:
+
+```yaml
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install envguard   # or: pip install .
+      # Exit code 1 (findings) should not stop the upload; anything else is a real error.
+      - run: envguard scan . --format sarif > envguard.sarif || test $? -eq 1
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: envguard.sarif
+```
+
+Code scanning needs a public repository or GitHub Code Security on a private one. Because this
+job succeeds when findings exist, keep a plain `envguard scan .` step if you also want the
+build to fail.
+
 ## Pre-commit hook
 
 `envguard scan --staged` scans only the lines added by the changes staged in Git, read from the
@@ -379,7 +428,6 @@ false-positive test and an entry in the detector table.
 
 ## Roadmap
 
-- SARIF output for GitHub code scanning
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP)
 - Parallel file scanning for very large trees
 

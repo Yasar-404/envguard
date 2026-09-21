@@ -11,9 +11,11 @@ from envguard import __version__
 from envguard.baseline import load_baseline, write_baseline
 from envguard.config import Config, find_config, load_config
 from envguard.models import EnvGuardError, Severity
-from envguard.reporting import render_json, render_text
+from envguard.reporting import render_json, render_sarif, render_text
 from envguard.rules import RULES
 from envguard.scanner import scan
+
+_RENDERERS = {"text": render_text, "json": render_json, "sarif": render_sarif}
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -44,7 +46,15 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     scan_cmd.add_argument("path", nargs="?", default=".", help="directory or file (default: .)")
-    scan_cmd.add_argument("--json", action="store_true", help="print a JSON report")
+    scan_cmd.add_argument(
+        "--format",
+        choices=sorted(_RENDERERS),
+        default="text",
+        help="report format (default: text)",
+    )
+    scan_cmd.add_argument(
+        "--json", action="store_const", const="json", dest="format", help="same as --format json"
+    )
     scan_cmd.add_argument(
         "--severity",
         choices=[s.label for s in Severity],
@@ -136,8 +146,7 @@ def _scan(args: argparse.Namespace) -> int:
         staged=args.staged,
         baseline=baseline,
     )
-    report = render_json if args.json else render_text
-    print(report(result, args.path))
+    print(_RENDERERS[args.format](result, args.path))
     return EXIT_FINDINGS if result.findings else EXIT_CLEAN
 
 
