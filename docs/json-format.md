@@ -27,6 +27,7 @@ or retyped. A breaking change bumps the version.
 | `low`           | integer | Findings with severity `low`.                              |
 | `files_scanned` | integer | Files read and scanned in the working tree.                |
 | `files_skipped` | integer | Files that could not be scanned: binary, too large, unreadable, symlinks. |
+| `baselined`     | integer | Findings suppressed because they are recorded in the baseline. |
 
 ### Finding
 
@@ -53,7 +54,8 @@ or retyped. A breaking change bumps the version.
     "medium": 0,
     "low": 0,
     "files_scanned": 118,
-    "files_skipped": 2
+    "files_skipped": 2,
+    "baselined": 0
   },
   "findings": [
     {

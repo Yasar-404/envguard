@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +23,7 @@ class Config:
     min_severity: Severity = Severity.LOW
     min_confidence: float = 0.5
     max_file_size: int = 1024 * 1024
+    baseline: Path | None = None
 
 
 def find_config(start: Path) -> Path | None:
@@ -44,13 +46,23 @@ def load_config(path: Path) -> Config:
     except tomllib.TOMLDecodeError as exc:
         raise ConfigError(f"invalid TOML in {path}: {exc}") from exc
     try:
-        return _build(raw)
+        config = _build(raw)
     except ConfigError as exc:
         raise ConfigError(f"{path}: {exc}") from None
+    if config.baseline is not None:
+        config = dataclasses.replace(config, baseline=path.parent / config.baseline)
+    return config
 
 
 def _build(raw: dict[str, Any]) -> Config:
-    known = {"exclude", "disable_rules", "min_severity", "min_confidence", "max_file_size_kb"}
+    known = {
+        "exclude",
+        "disable_rules",
+        "min_severity",
+        "min_confidence",
+        "max_file_size_kb",
+        "baseline",
+    }
     unknown = sorted(set(raw) - known)
     if unknown:
         raise ConfigError(f"unknown option(s): {', '.join(unknown)}")
@@ -68,7 +80,12 @@ def _build(raw: dict[str, Any]) -> Config:
         except ValueError as exc:
             raise ConfigError(f"min_severity: {exc}") from None
 
+    baseline = raw.get("baseline")
+    if baseline is not None and not isinstance(baseline, str):
+        raise ConfigError("baseline must be a file path string")
+
     return Config(
+        baseline=Path(baseline) if baseline else None,
         exclude=tuple(_string_list(raw, "exclude")),
         disable_rules=frozenset(disabled),
         min_severity=min_severity,

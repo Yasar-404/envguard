@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class EnvGuardError(Exception):
@@ -41,3 +41,5 @@ class Finding:
     message: str
     remediation: str
     commit: str | None = None
+    # Identifies the finding across runs without revealing the secret; used by baselines.
+    fingerprint: str = field(default="", repr=False)

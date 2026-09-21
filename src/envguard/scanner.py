@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from itertools import groupby
 from pathlib import Path, PurePosixPath
@@ -47,6 +48,7 @@ class ScanResult:
     findings: list[Finding]
     files_scanned: int = 0
     files_skipped: int = 0
+    baselined: int = 0
 
 
 def active_rules(config: Config) -> tuple[Rule, ...]:
@@ -54,16 +56,24 @@ def active_rules(config: Config) -> tuple[Rule, ...]:
 
 
 def scan(
-    root: Path, config: Config, *, history: bool = False, max_commits: int | None = None
+    root: Path,
+    config: Config,
+    *,
+    history: bool = False,
+    max_commits: int | None = None,
+    baseline: frozenset[str] = frozenset(),
 ) -> ScanResult:
     if not root.exists():
         raise EnvGuardError(f"path does not exist: {root}")
     result = scan_tree(root, config)
-    if not history:
+    if history:
+        current = {f.fingerprint for f in result.findings}
+        past = [f for f in scan_history(root, config, max_commits) if f.fingerprint not in current]
+        result = replace(result, findings=_ordered(result.findings + past))
+    if not baseline:
         return result
-    current = {(f.rule_id, f.file, f.masked_value) for f in result.findings}
-    past = [f for f in scan_history(root, config, max_commits) if _identity(f) not in current]
-    return ScanResult(_ordered(result.findings + past), result.files_scanned, result.files_skipped)
+    kept = [f for f in result.findings if f.fingerprint not in baseline]
+    return replace(result, findings=kept, baselined=len(result.findings) - len(kept))
 
 
 def scan_tree(root: Path, config: Config) -> ScanResult:
@@ -100,13 +110,13 @@ def scan_history(root: Path, config: Config, max_commits: int | None = None) -> 
         return skip[path]
 
     # Commits arrive newest first, so a later duplicate is an earlier introduction.
-    introduced: dict[tuple[str, str, str], Finding] = {}
+    introduced: dict[str, Finding] = {}
     for (commit, path), lines in groupby(git.added_lines(root, max_commits), lambda a: a[:2]):
         if should_skip(path):
             continue
         numbered = ((line.number, line.text) for line in lines)
         for finding in scan_lines(path, numbered, rules, config, commit):
-            introduced[_identity(finding)] = finding
+            introduced[finding.fingerprint] = finding
     return list(introduced.values())
 
 
@@ -147,6 +157,7 @@ def scan_lines(
                     message=hit.rule.name,
                     remediation=hit.rule.remediation,
                     commit=commit,
+                    fingerprint=_fingerprint(hit.rule.id, path, hit.digest),
                 )
             )
     return findings
@@ -183,8 +194,9 @@ def _without_overlaps(hits: list[Hit]) -> list[Hit]:
     return kept
 
 
-def _identity(finding: Finding) -> tuple[str, str, str]:
-    return finding.rule_id, finding.file, finding.masked_value
+def _fingerprint(rule_id: str, path: str, secret_digest: str) -> str:
+    """Stable across line moves; changes when the rule, the file or the secret changes."""
+    return hashlib.sha256(f"{rule_id}\0{path}\0{secret_digest}".encode()).hexdigest()[:32]
 
 
 def _ordered(findings: list[Finding]) -> list[Finding]:

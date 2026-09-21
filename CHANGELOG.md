@@ -18,3 +18,9 @@ All notable changes are documented here. The format follows
 - `.envguard.toml` configuration and `--exclude`, `--severity`, `--config` options.
 - `envguard rules` to list the detectors.
 - Inline suppression with `envguard:ignore`.
+- Baseline files: `--write-baseline`, `--baseline` and a `baseline` config option. Findings are
+  fingerprinted from rule, file and a hash of the secret; the JSON summary gains `baselined`.
+
+### Fixed
+
+- History scanning no longer merges two different secrets of the same type in one file.

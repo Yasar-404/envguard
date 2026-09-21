@@ -22,6 +22,7 @@ def render_json(result: ScanResult, target: str) -> str:
             "low": counts[Severity.LOW],
             "files_scanned": result.files_scanned,
             "files_skipped": result.files_skipped,
+            "baselined": result.baselined,
         },
         "findings": [
             {
@@ -75,7 +76,10 @@ def _footer(result: ScanResult) -> str:
     summary += f"Scanned {result.files_scanned} files"
     if result.files_skipped:
         summary += f" ({result.files_skipped} skipped: binary, too large or unreadable)"
-    return summary + "."
+    summary += "."
+    if result.baselined:
+        summary += f" {result.baselined} known finding(s) suppressed by baseline."
+    return summary
 
 
 def _counts(findings: list[Finding]) -> Counter[Severity]:

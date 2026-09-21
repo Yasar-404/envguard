@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from envguard import __version__
+from envguard.baseline import load_baseline, write_baseline
 from envguard.config import Config, find_config, load_config
 from envguard.models import EnvGuardError, Severity
 from envguard.reporting import render_json, render_text
@@ -63,6 +64,15 @@ def build_parser() -> argparse.ArgumentParser:
     scan_cmd.add_argument(
         "--max-commits", type=int, metavar="N", help="with --history, inspect at most N commits"
     )
+    scan_cmd.add_argument(
+        "--baseline", type=Path, metavar="FILE", help="ignore findings recorded in this baseline"
+    )
+    scan_cmd.add_argument(
+        "--write-baseline",
+        type=Path,
+        metavar="FILE",
+        help="record all current findings in FILE and exit 0",
+    )
     scan_cmd.set_defaults(handler=_scan)
 
     rules_cmd = commands.add_parser("rules", help="list the detection rules")
@@ -100,7 +110,20 @@ def _scan(args: argparse.Namespace) -> int:
     if args.exclude:
         config = dataclasses.replace(config, exclude=(*config.exclude, *args.exclude))
 
-    result = scan(root, config, history=args.history, max_commits=args.max_commits)
+    if args.baseline and args.write_baseline:
+        raise EnvGuardError("--baseline and --write-baseline cannot be used together")
+
+    if args.write_baseline:
+        result = scan(root, config, history=args.history, max_commits=args.max_commits)
+        count = write_baseline(args.write_baseline, result.findings)
+        print(f"Wrote {count} finding(s) to {args.write_baseline}", file=sys.stderr)
+        return EXIT_CLEAN
+
+    baseline_path = args.baseline or config.baseline
+    baseline = load_baseline(baseline_path) if baseline_path else frozenset()
+    result = scan(
+        root, config, history=args.history, max_commits=args.max_commits, baseline=baseline
+    )
     report = render_json if args.json else render_text
     print(report(result, args.path))
     return EXIT_FINDINGS if result.findings else EXIT_CLEAN

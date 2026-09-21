@@ -59,6 +59,8 @@ envguard scan . --severity high      # only report HIGH findings
 envguard scan . --exclude node_modules --exclude "*.svg"
 envguard scan . --history            # also scan lines added in Git history
 envguard scan . --history --max-commits 500
+envguard scan . --write-baseline .envguard-baseline.json   # accept today's findings
+envguard scan . --baseline .envguard-baseline.json         # report only new ones
 envguard rules                       # list detectors
 envguard --help
 ```
@@ -117,6 +119,35 @@ what was matched and where.
 
 Add `envguard:ignore` in a comment on a line to suppress findings on that line.
 
+## Baselines
+
+Adopting a scanner on an existing codebase usually means hundreds of old findings you cannot
+fix today. A baseline records them so that only *new* secrets fail the build.
+
+```
+envguard scan . --write-baseline .envguard-baseline.json   # writes the file, exits 0
+envguard scan . --baseline .envguard-baseline.json         # exits 1 only for new findings
+```
+
+or set `baseline = ".envguard-baseline.json"` in `.envguard.toml` so that a plain
+`envguard scan .` uses it. Commit the file; entries are sorted, so diffs stay small. Add
+`--history` when writing the baseline to include findings in old commits, and pass the same
+flag when scanning.
+
+Each entry holds a fingerprint, the rule ID and the file. The fingerprint is a truncated
+SHA-256 over the rule, the file path and a hash of the secret, so:
+
+- it survives edits that move the line, and only changes if the secret or file changes;
+- two different secrets in one file are tracked separately, so a new key cannot hide behind
+  an old one;
+- the baseline never contains a secret. A hash of a weak password could in principle be
+  brute-forced, but only for a value that is already in your repository.
+
+Suppressed findings are counted in the report (`summary.baselined` in JSON). Entries for
+findings that no longer exist are ignored, not an error; regenerate the baseline to prune
+them. A rotated secret is a new finding, as it should be, and a renamed file needs its
+entries regenerated.
+
 ## Configuration
 
 EnvGuard reads `.envguard.toml` from the scanned directory or the nearest parent, stopping at
@@ -138,6 +169,9 @@ min_confidence = 0.5
 
 # Files larger than this are skipped.
 max_file_size_kb = 1024
+
+# Baseline file of accepted findings, relative to this config file.
+baseline = ".envguard-baseline.json"
 ```
 
 Command-line `--severity` overrides `min_severity`; `--exclude` adds to `exclude`.
@@ -173,7 +207,7 @@ $ envguard scan . --json
 {
   "version": "1",
   "repository": ".",
-  "summary": {"high": 1, "medium": 0, "low": 0, "files_scanned": 118, "files_skipped": 2},
+  "summary": {"high": 1, "medium": 0, "low": 0, "files_scanned": 118, "files_skipped": 2, "baselined": 0},
   "findings": [
     {
       "rule_id": "aws-access-key",
@@ -243,6 +277,7 @@ src/envguard/
     filesystem.py   gitignore-style matcher, file discovery, safe file reading
     git.py          git subprocess wrappers and `git log -p` parsing
     config.py       .envguard.toml loading and validation
+    baseline.py     baseline file reading and writing
     reporting.py    text and JSON renderers
     models.py       Severity, Finding, base exception
 ```
@@ -292,7 +327,8 @@ false-positive test and an entry in the detector table.
 - HTTP auth coverage is limited to `Bearer`/`token` values; Basic credentials are not
   detected. There are no detectors yet for Slack, Twilio, npm, PyPI, Azure or GCP
   service-account keys.
-- No baseline or allowlist by fingerprint; use `envguard:ignore` or `exclude`.
+- Baseline entries are tied to the file path, so a renamed file resurfaces its findings until
+  the baseline is regenerated.
 - UTF-16 files are treated as binary. Nested `.gitignore` files are only honoured inside Git
   repositories.
 - History scanning ignores merge-commit diffs (as `git log -p` does) and does not follow
@@ -300,7 +336,6 @@ false-positive test and an entry in the detector table.
 
 ## Roadmap
 
-- Baseline file to accept existing findings and fail only on new ones
 - SARIF output for GitHub code scanning
 - Pre-commit hook and staged-files mode
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP)

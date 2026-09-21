@@ -19,6 +19,7 @@ def test_json_schema():
     assert report["repository"] == "./project"
     assert report["summary"] == {
         "high": 1, "medium": 0, "low": 0, "files_scanned": 3, "files_skipped": 1,
+        "baselined": 0,
     }  # fmt: skip
     (finding,) = report["findings"]
     assert list(finding) == [

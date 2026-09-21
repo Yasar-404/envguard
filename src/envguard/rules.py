@@ -7,6 +7,7 @@ Every pattern has a named `secret` group. The matched value is scored and masked
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 from collections.abc import Callable, Iterator
@@ -32,6 +33,8 @@ class Hit:
     end: int
     confidence: float
     masked: str
+    # SHA-256 of the secret, so callers can tell secrets apart without ever seeing one.
+    digest: str
 
 
 @dataclass(frozen=True)
@@ -55,7 +58,12 @@ class Rule:
             confidence = self.score(match)
             if confidence > 0:
                 yield Hit(
-                    self, match.start("secret"), match.end("secret"), confidence, self._mask(match)
+                    self,
+                    match.start("secret"),
+                    match.end("secret"),
+                    confidence,
+                    self._mask(match),
+                    hashlib.sha256(match["secret"].encode()).hexdigest(),
                 )
 
     def _mask(self, match: re.Match[str]) -> str:
