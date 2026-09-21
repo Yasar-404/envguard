@@ -23,6 +23,12 @@ envguard scan .
 CI runs the same checks on Linux and Windows for Python 3.11 to 3.13. The last command is
 also a check on the tests: the repository must scan clean.
 
+`tests/integration/test_precommit.py` installs the hook through the real pre-commit framework.
+It needs network access to build the hook's virtualenv (about a minute the first time) and
+skips itself if `pre-commit` is not installed. Run it alone with
+`pytest tests/integration/test_precommit.py`, or leave it out with
+`pytest --ignore=tests/integration/test_precommit.py`.
+
 ## Ground rules
 
 - **No real secrets, ever**, including in issues and pull requests. Tests use

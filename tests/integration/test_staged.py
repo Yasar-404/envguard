@@ -178,3 +178,43 @@ def test_hook_manifest_runs_the_staged_scan_without_filenames():
     assert "entry: envguard scan --staged" in manifest
     assert "pass_filenames: false" in manifest
     assert "language: python" in manifest
+
+
+def test_staged_deletion_is_not_scanned_and_does_not_fail(repo, capsys):
+    write_tree(repo, {"old.py": f"K = '{KEY}'\n", "keep.py": "x = 1\n"})
+    commit_all(repo)
+    git(repo, "rm", "-q", "old.py")
+    code, report, _ = staged_scan(capsys, repo)
+    assert code == 0
+    assert report["summary"]["files_scanned"] == 0
+
+
+def test_pure_rename_adds_no_lines(repo, capsys):
+    write_tree(repo, {"old.py": f"K = '{KEY}'\nx = 1\n"})
+    commit_all(repo)
+    git(repo, "mv", "old.py", "new.py")
+    code, _, _ = staged_scan(capsys, repo)
+    assert code == 0
+
+
+def test_secret_added_while_renaming_is_reported_under_the_new_name(repo, capsys):
+    write_tree(repo, {"old.py": "x = 1\ny = 2\nz = 3\nw = 4\n"})
+    commit_all(repo)
+    git(repo, "mv", "old.py", "new.py")
+    write_tree(repo, {"new.py": f"x = 1\ny = 2\nz = 3\nw = 4\nK = '{KEY}'\n"})
+    git(repo, "add", "new.py")
+    code, report, _ = staged_scan(capsys, repo)
+    assert code == 1
+    assert [(f["file"], f["line"]) for f in report["findings"]] == [("new.py", 5)]
+
+
+def test_all_staged_files_are_scanned_together(repo, capsys):
+    other = "AKIA" + fake.synthetic(16, "second", fake.UPPER_DIGITS)
+    write_tree(
+        repo,
+        {"a.py": f"K = '{KEY}'\n", "b/c.py": f"K = '{other}'\n", "clean.py": "x = 1\n"},
+    )
+    git(repo, "add", "-A")
+    _, report, _ = staged_scan(capsys, repo)
+    assert sorted(f["file"] for f in report["findings"]) == ["a.py", "b/c.py"]
+    assert report["summary"]["files_scanned"] == 3

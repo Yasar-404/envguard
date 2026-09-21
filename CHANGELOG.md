@@ -23,6 +23,19 @@ All notable changes are documented here. The format follows
 - `--staged` mode and a `.pre-commit-hooks.yaml` manifest to block commits that add secrets.
 - `--format sarif` for SARIF 2.1.0 output; `--format text|json|sarif` with `--json` kept as a shorthand.
 
+### Changed
+
+- The pre-commit hook now runs only at the `pre-commit` stage and declares
+  `minimum_pre_commit_version: 3.2.0`. Previously it would also run at other stages such as
+  `pre-push`, where nothing is staged and it silently passed.
+
+### Testing
+
+- Integration tests for the hook through the pre-commit framework: `pre-commit run`,
+  `pre-commit try-repo` and `git commit` after `pre-commit install`. `pre-commit` joins the
+  `dev` extra.
+- Staged-scan tests for deletions, renames and multiple files.
+
 ### Fixed
 
 - History scanning no longer merges two different secrets of the same type in one file.

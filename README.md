@@ -235,17 +235,25 @@ Command-line `--severity` overrides `min_severity`, and `--exclude` adds to `exc
 
 ## Pre-commit hook
 
-`envguard scan --staged` is designed for commit hooks. With the [pre-commit](https://pre-commit.com) framework, add this to `.pre-commit-config.yaml`:
+`envguard scan --staged` is designed for commit hooks. It scans the lines added by the changes staged in Git, read from the index, so it checks what is about to be committed. With the [pre-commit](https://pre-commit.com) framework (3.2 or newer), add this to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
   - repo: https://github.com/Yasar-404/envguard
-    rev: main  # pin to a release tag or commit SHA; no release has been tagged yet
+    rev: <release-tag>  # no release has been tagged yet; until then use a commit SHA
     hooks:
       - id: envguard
 ```
 
-pre-commit builds an isolated environment for the hook. If EnvGuard is already installed, a local hook avoids that:
+Options go in `args`, for example `args: ["--exclude", "generated/"]` or `args: ["--baseline", ".envguard-baseline.json"]`.
+
+The hook runs only at the `pre-commit` stage and deliberately ignores the file list pre-commit passes (`pass_filenames: false`). pre-commit temporarily stashes unstaged changes while hooks run, and EnvGuard reads the staged diff, so a partially staged file is checked exactly as it will be committed. Consequences:
+
+- A secret that is only in the working tree or in unstaged edits does not block a commit; it is checked when it is staged.
+- `pre-commit run --all-files` and `--files` do not widen the scan. They report a pass when nothing is staged, so they are not a substitute for a CI scan. Use `envguard scan .` in CI.
+- Pure deletions and pure renames add no lines and are not scanned. A file staged with a secret added during the rename is.
+
+pre-commit builds an isolated environment for the hook, so the first run needs network access to install EnvGuard. If EnvGuard is already installed, a local hook avoids that:
 
 ```yaml
 repos:
@@ -269,8 +277,10 @@ A commit with findings is blocked and the masked report is shown. Fix the secret
 
 Validation status:
 
-- The plain Git hook above is tested in CI on Linux and Windows: the test installs a real `.git/hooks/pre-commit` script and checks that `git commit` is blocked or allowed.
-- The pre-commit framework path was run manually with `pre-commit try-repo https://github.com/Yasar-404/envguard envguard` on Windows with pre-commit 4.6.2. It failed with exit code 1 for a staged synthetic AWS key and passed for a clean change. It has not been run through the framework on Linux or macOS, and CI does not exercise it.
+- The plain Git hook above is covered by a test that installs a real `.git/hooks/pre-commit` script and checks that `git commit` is blocked or allowed.
+- The framework path is covered by `tests/integration/test_precommit.py`. It copies the current sources into a temporary Git repository, points a `.pre-commit-config.yaml` at it and drives the real tools: `pre-commit run`, `pre-commit try-repo`, and `git commit` after `pre-commit install`. It checks that a staged synthetic secret fails the hook and blocks the commit with masked output, that clean and unstaged content passes, and that hook `args` are honoured. The test needs network access to build the hook environment and skips itself if `pre-commit` is not installed.
+- `try-repo` only sees staged changes too: `pre-commit try-repo <repo> envguard --files secret.env` passes unless `secret.env` has been staged with `git add`.
+- Not tested: macOS, and pre-commit versions other than the ones CI installs.
 
 ## GitHub Actions
 
@@ -421,10 +431,10 @@ There is no formal benchmark suite. What has been measured and what is design in
 
 ## Testing
 
-The suite has 259 tests. 258 pass and 1 is skipped on Windows, where creating symlinks needs elevated rights.
+The suite has 274 tests. 273 pass and 1 is skipped on Windows, where creating symlinks needs elevated rights. The pre-commit framework tests take about a minute on their own because pre-commit builds a virtualenv for the hook.
 
 - Unit tests cover every rule with positive and false-positive cases, masking, confidence and severity calculation, path-context adjustments, `.gitignore` and exclude matching, binary, oversized and malformed files, configuration validation, baselines and the report formats.
-- Integration tests run the CLI against generated fixture projects and throwaway Git repositories: exit codes, JSON and SARIF output, `.gitignore` behaviour, history scanning, staged scanning, baselines and a real `.git/hooks/pre-commit` script. Fixtures are built at run time under `tmp_path`, using synthetic credentials.
+- Integration tests run the CLI against generated fixture projects and throwaway Git repositories: exit codes, JSON and SARIF output, `.gitignore` behaviour, history scanning, staged scanning, baselines, a real `.git/hooks/pre-commit` script and the hook installed through the pre-commit framework. Fixtures are built at run time under `tmp_path`, using synthetic credentials.
 - A test scans this repository and expects no findings.
 
 CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: `ruff check`, `ruff format --check`, `mypy` in strict mode and `pytest`, followed by a package build checked with `twine check`. All six matrix jobs and the build passed on `main` at the time of writing. macOS is not tested.
@@ -437,7 +447,7 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 - Baseline entries are tied to the file path, so a renamed file resurfaces its findings until the baseline is regenerated.
 - UTF-16 files are treated as binary. Nested `.gitignore` files are only honoured inside Git repositories.
 - History scanning ignores merge-commit diffs (as `git log -p` does) and does not follow file renames beyond the lines each commit actually changed. It has not been run on very large repositories.
-- `git commit --no-verify` bypasses the pre-commit hook.
+- `git commit --no-verify` bypasses the pre-commit hook, and the hook only inspects staged changes, so `pre-commit run --all-files` does not scan the tree.
 - Scanning is single-threaded.
 
 ## Roadmap
@@ -461,7 +471,7 @@ pytest
 envguard scan .               # the repository should scan clean
 ```
 
-Integration tests create throwaway projects and Git repositories under pytest's `tmp_path`, so they need `git` on the `PATH` and skip themselves otherwise.
+Integration tests create throwaway projects and Git repositories under pytest's `tmp_path`, so they need `git` on the `PATH` and skip themselves otherwise. The pre-commit framework tests also need the `pre-commit` package (part of the `dev` extra) and network access for the first hook environment build.
 
 ## Contributing
 

@@ -16,8 +16,11 @@ def write_tree(root: Path, files: dict[str, str | bytes]) -> None:
             path.write_text(content, encoding="utf-8", newline="\n")
 
 
-def git(root: Path, *args: str) -> str:
-    result = subprocess.run(
+def git_result(
+    root: Path, *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run git without raising, for commands that are expected to fail."""
+    return subprocess.run(
         [
             "git", "-C", str(root),
             "-c", "user.name=EnvGuard Tests", "-c", "user.email=tests@envguard.invalid",
@@ -26,8 +29,15 @@ def git(root: Path, *args: str) -> str:
         ],
         capture_output=True,
         text=True,
-        check=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
     )  # fmt: skip
+
+
+def git(root: Path, *args: str) -> str:
+    result = git_result(root, *args)
+    result.check_returncode()
     return result.stdout
 
 
