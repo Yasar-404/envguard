@@ -6,7 +6,7 @@ A lightweight Python CLI that detects exposed secrets, API keys, tokens and cred
 ![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 [![License: MIT](https://img.shields.io/github/license/Yasar-404/envguard)](LICENSE)
 
-Status: alpha, version 0.1.0. No release has been tagged yet. See the [changelog](CHANGELOG.md).
+Status: alpha. The current release is [v0.1.0](https://github.com/Yasar-404/envguard/releases/tag/v0.1.0); see the [changelog](CHANGELOG.md).
 
 ```text
 $ envguard scan ./project
@@ -79,19 +79,21 @@ Developer workflow
 
 EnvGuard requires Python 3.11 or newer. Git features need the `git` executable on the `PATH`.
 
-EnvGuard is not published on PyPI. Install it from source:
+EnvGuard is not published on PyPI. Install the tagged release directly from GitHub:
 
 ```bash
-git clone https://github.com/Yasar-404/envguard.git
+python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.0"
+```
+
+or from a clone:
+
+```bash
+git clone --branch v0.1.0 https://github.com/Yasar-404/envguard.git
 cd envguard
 python -m pip install .
 ```
 
-or directly from GitHub:
-
-```bash
-python -m pip install "git+https://github.com/Yasar-404/envguard.git"
-```
+Leave out the tag to install the current `main` branch.
 
 Do not run `pip install envguard`. That name on PyPI belongs to an unrelated project and installs different software.
 
@@ -240,7 +242,7 @@ Command-line `--severity` overrides `min_severity`, and `--exclude` adds to `exc
 ```yaml
 repos:
   - repo: https://github.com/Yasar-404/envguard
-    rev: <release-tag>  # no release has been tagged yet; until then use a commit SHA
+    rev: v0.1.0
     hooks:
       - id: envguard
 ```
@@ -301,11 +303,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git"
+      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.0"
       - run: envguard scan . --history
 ```
 
-Pin the install to a tag or commit (`git+https://...@<ref>`) once a release exists. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
+The install is pinned to the release tag so CI is reproducible; remove `@v0.1.0` to track `main`. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
 
 To upload results to GitHub code scanning, see [SARIF output](#sarif).
 
@@ -375,7 +377,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git"
+      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.0"
       # Exit code 1 (findings) should not stop the upload; anything else is a real error.
       - run: envguard scan . --format sarif > envguard.sarif || test $? -eq 1
       - uses: github/codeql-action/upload-sarif@v3
@@ -452,7 +454,7 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 
 ## Roadmap
 
-- First tagged release. Publishing to PyPI needs a different distribution name, because `envguard` is taken.
+- Publishing to PyPI. This needs a different distribution name, because `envguard` is taken.
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP).
 - Parallel file scanning for very large trees.
 
