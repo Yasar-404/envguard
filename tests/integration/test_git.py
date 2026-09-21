@@ -217,4 +217,4 @@ class TestDiffParsing:
 
     def test_require_repository_rejects_plain_directories(self, tmp_path):
         with pytest.raises(envguard_git.GitError, match="not inside a git repository"):
-            envguard_git.require_repository(tmp_path)
+            envguard_git.require_repository(tmp_path, "--history")

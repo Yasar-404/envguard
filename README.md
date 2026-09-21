@@ -59,6 +59,7 @@ envguard scan . --severity high      # only report HIGH findings
 envguard scan . --exclude node_modules --exclude "*.svg"
 envguard scan . --history            # also scan lines added in Git history
 envguard scan . --history --max-commits 500
+envguard scan --staged               # only what is staged for the next commit
 envguard scan . --write-baseline .envguard-baseline.json   # accept today's findings
 envguard scan . --baseline .envguard-baseline.json         # report only new ones
 envguard rules                       # list detectors
@@ -227,6 +228,48 @@ $ envguard scan . --json
 The schema is versioned and documented in [docs/json-format.md](docs/json-format.md). The
 complete secret never appears in it.
 
+## Pre-commit hook
+
+`envguard scan --staged` scans only the lines added by the changes staged in Git, read from the
+index rather than the working tree, so it checks exactly what is about to be committed. It is
+quick, honours `exclude`, `--baseline` and `envguard:ignore`, and cannot be combined with
+`--history`. Run it from the repository root, or pass a directory.
+
+With the [pre-commit](https://pre-commit.com) framework, add this to `.pre-commit-config.yaml`
+(use a release tag or commit SHA for `rev`):
+
+```yaml
+repos:
+  - repo: https://github.com/Yasar-404/envguard
+    rev: main
+    hooks:
+      - id: envguard
+```
+
+If EnvGuard is already installed, a local hook avoids building a separate environment:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: envguard
+        name: envguard
+        entry: envguard scan --staged
+        language: system
+        pass_filenames: false
+```
+
+Without the framework, save this as `.git/hooks/pre-commit` and make it executable:
+
+```sh
+#!/bin/sh
+exec envguard scan --staged
+```
+
+A commit with findings is blocked and the masked report is shown. Fix the secret, rotate it,
+and commit again. `git commit --no-verify` skips the hook, so keep the CI scan as the
+backstop.
+
 ## GitHub Actions
 
 `.github/workflows/envguard.yml` in this repository is a working example:
@@ -337,7 +380,6 @@ false-positive test and an entry in the detector table.
 ## Roadmap
 
 - SARIF output for GitHub code scanning
-- Pre-commit hook and staged-files mode
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP)
 - Parallel file scanning for very large trees
 

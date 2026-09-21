@@ -62,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--history", action="store_true", help="also scan lines added in Git history"
     )
     scan_cmd.add_argument(
+        "--staged",
+        action="store_true",
+        help="scan only the changes staged in Git (for pre-commit hooks)",
+    )
+    scan_cmd.add_argument(
         "--max-commits", type=int, metavar="N", help="with --history, inspect at most N commits"
     )
     scan_cmd.add_argument(
@@ -114,7 +119,9 @@ def _scan(args: argparse.Namespace) -> int:
         raise EnvGuardError("--baseline and --write-baseline cannot be used together")
 
     if args.write_baseline:
-        result = scan(root, config, history=args.history, max_commits=args.max_commits)
+        result = scan(
+            root, config, history=args.history, max_commits=args.max_commits, staged=args.staged
+        )
         count = write_baseline(args.write_baseline, result.findings)
         print(f"Wrote {count} finding(s) to {args.write_baseline}", file=sys.stderr)
         return EXIT_CLEAN
@@ -122,7 +129,12 @@ def _scan(args: argparse.Namespace) -> int:
     baseline_path = args.baseline or config.baseline
     baseline = load_baseline(baseline_path) if baseline_path else frozenset()
     result = scan(
-        root, config, history=args.history, max_commits=args.max_commits, baseline=baseline
+        root,
+        config,
+        history=args.history,
+        max_commits=args.max_commits,
+        staged=args.staged,
+        baseline=baseline,
     )
     report = render_json if args.json else render_text
     print(report(result, args.path))

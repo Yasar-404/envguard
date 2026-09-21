@@ -62,10 +62,13 @@ def scan(
     history: bool = False,
     max_commits: int | None = None,
     baseline: frozenset[str] = frozenset(),
+    staged: bool = False,
 ) -> ScanResult:
     if not root.exists():
         raise EnvGuardError(f"path does not exist: {root}")
-    result = scan_tree(root, config)
+    if staged and history:
+        raise EnvGuardError("--staged and --history cannot be used together")
+    result = scan_staged(root, config) if staged else scan_tree(root, config)
     if history:
         current = {f.fingerprint for f in result.findings}
         past = [f for f in scan_history(root, config, max_commits) if f.fingerprint not in current]
@@ -99,25 +102,40 @@ def scan_history(root: Path, config: Config, max_commits: int | None = None) -> 
     """Findings in lines added by past commits, reported once at the commit that added them."""
     if root.is_file():
         raise EnvGuardError("--history needs a directory inside a git repository, not a file")
-    git.require_repository(root)
+    git.require_repository(root, "--history")
+    return _scan_added(git.added_lines(root, max_commits), config).findings
+
+
+def scan_staged(root: Path, config: Config) -> ScanResult:
+    """Findings in the lines added by the changes staged for the next commit."""
+    if root.is_file():
+        raise EnvGuardError("--staged needs a directory inside a git repository, not a file")
+    git.require_repository(root, "--staged")
+    return _scan_added(git.staged_added_lines(root), config)
+
+
+def _scan_added(added: Iterable[git.AddedLine], config: Config) -> ScanResult:
     rules = active_rules(config)
     matcher = PathMatcher(exclude_patterns(config.exclude))
     skip: dict[str, bool] = {}
+    scanned: set[str] = set()
 
     def should_skip(path: str) -> bool:
         if path not in skip:
             skip[path] = not is_scannable_name(path) or matcher.excludes_path(path)
         return skip[path]
 
-    # Commits arrive newest first, so a later duplicate is an earlier introduction.
-    introduced: dict[str, Finding] = {}
-    for (commit, path), lines in groupby(git.added_lines(root, max_commits), lambda a: a[:2]):
+    # Later duplicates replace earlier ones. History arrives newest first, so the survivor
+    # is the commit that introduced the secret.
+    unique: dict[str, Finding] = {}
+    for (commit, path), lines in groupby(added, lambda a: a[:2]):
         if should_skip(path):
             continue
+        scanned.add(path)
         numbered = ((line.number, line.text) for line in lines)
-        for finding in scan_lines(path, numbered, rules, config, commit):
-            introduced[finding.fingerprint] = finding
-    return list(introduced.values())
+        for finding in scan_lines(path, numbered, rules, config, commit or None):
+            unique[finding.fingerprint] = finding
+    return ScanResult(_ordered(list(unique.values())), files_scanned=len(scanned))
 
 
 def scan_lines(

@@ -1,0 +1,6 @@
+- id: envguard
+  name: envguard
+  description: Block commits that add secrets or credentials.
+  entry: envguard scan --staged
+  language: python
+  pass_filenames: false

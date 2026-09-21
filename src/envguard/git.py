@@ -19,6 +19,7 @@ from envguard.models import EnvGuardError
 _GIT_TIMEOUT = 60
 _COMMIT_MARKER = "\0"
 _HUNK_HEADER = re.compile(r"@@ -\d+(?:,\d+)? \+(\d+)")
+_DIFF_OPTIONS = ["-U0", "--no-color", "--no-ext-diff", "--no-textconv", "--relative"]
 
 
 class GitError(EnvGuardError):
@@ -58,12 +59,12 @@ def list_files(root: Path) -> list[str] | None:
     return sorted(name for name in names if not name.endswith("/"))
 
 
-def require_repository(root: Path) -> None:
+def require_repository(root: Path, feature: str) -> None:
     if shutil.which("git") is None:
-        raise GitError("git executable not found; --history requires git")
+        raise GitError(f"git executable not found; {feature} requires git")
     proc = _git(root, "rev-parse", "--is-inside-work-tree")
     if proc is None or proc.returncode != 0:
-        raise GitError(f"{root} is not inside a git repository; --history requires one")
+        raise GitError(f"{root} is not inside a git repository; {feature} requires one")
 
 
 def added_lines(root: Path, max_commits: int | None = None) -> Iterator[AddedLine]:
@@ -72,14 +73,19 @@ def added_lines(root: Path, max_commits: int | None = None) -> Iterator[AddedLin
     A single `git log -p -U0` process is used; only added lines are parsed, so unchanged
     content is never re-scanned. Paths are relative to `root`.
     """
-    command = [
-        "git", "-C", str(root), "-c", "core.quotepath=off",
-        "log", "--all", "-p", "-U0", "--no-color", "--no-ext-diff", "--no-textconv",
-        "--relative", "--format=%x00%H",
-    ]  # fmt: skip
+    args = ["log", "--all", "-p", *_DIFF_OPTIONS, "--format=%x00%H"]
     if max_commits is not None:
-        command.append(f"--max-count={max_commits}")
+        args.append(f"--max-count={max_commits}")
+    return _stream_added_lines(root, args, "git log")
 
+
+def staged_added_lines(root: Path) -> Iterator[AddedLine]:
+    """Stream the lines added by the changes currently staged in the index."""
+    return _stream_added_lines(root, ["diff", "--cached", *_DIFF_OPTIONS], "git diff")
+
+
+def _stream_added_lines(root: Path, args: list[str], label: str) -> Iterator[AddedLine]:
+    command = ["git", "-C", str(root), "-c", "core.quotepath=off", *args]
     commit = ""
     path: str | None = None
     number = 0
@@ -105,7 +111,7 @@ def added_lines(root: Path, max_commits: int | None = None) -> Iterator[AddedLin
                 yield AddedLine(commit, path, number, line[1:])
                 number += 1
     if proc.returncode != 0:
-        raise GitError(f"git log failed with exit code {proc.returncode}")
+        raise GitError(f"{label} failed with exit code {proc.returncode}")
 
 
 def _first_added_line(hunk_header: str) -> int:
