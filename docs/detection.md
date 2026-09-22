@@ -19,6 +19,8 @@ Each line of a file is checked in three steps.
 | `aws-secret-key`      | 0.95 if the 40-character value has entropy of at least 3.7 bits, else rejected. |
 | `github-token`        | 0.97 unless a placeholder.                                                    |
 | `stripe-secret-key`   | 0.97 unless a placeholder. Only live keys match.                              |
+| `slack-token`         | 0.95 unless a placeholder.                                                    |
+| `twilio-api-key`      | 0.90 unless a placeholder.                                                    |
 | `google-api-key`      | 0.90 unless a placeholder.                                                    |
 | `jwt`                 | 0.85 if the header segment decodes to a JSON object containing `alg`; else rejected. |
 | `private-key`         | 0.95. 0.40 if the header is immediately followed by a closing quote (a string being compared against). |

@@ -16,6 +16,7 @@ ALNUM = string.ascii_letters + string.digits
 UPPER_DIGITS = string.ascii_uppercase + string.digits
 BASE64 = ALNUM + "/+"
 URLSAFE = ALNUM + "_-"
+HEX = string.digits + "abcdef"
 
 
 def synthetic(length: int, label: str, alphabet: str = ALNUM) -> str:
@@ -46,6 +47,25 @@ def stripe_key() -> str:
 
 def google_key() -> str:
     return "AIza" + synthetic(35, "google", URLSAFE)
+
+
+def slack_bot_token() -> str:
+    return "xoxb-" + synthetic(24, "slack-bot")
+
+
+def slack_app_token() -> str:
+    return (
+        "xapp-1-"
+        + synthetic(10, "slack-app-id", UPPER_DIGITS)
+        + "-"
+        + synthetic(13, "slack-app-num", string.digits)
+        + "-"
+        + synthetic(32, "slack-app-secret", HEX)
+    )
+
+
+def twilio_api_key() -> str:
+    return "SK" + synthetic(32, "twilio-api-key", HEX)
 
 
 def _b64url(payload: dict[str, str]) -> str:

@@ -33,6 +33,8 @@ def test_every_pattern_has_a_secret_group():
 def positive_cases():
     aws_key, aws_secret = fake.aws_access_key(), fake.aws_secret_key()
     gh, stripe, google = fake.github_token(), fake.stripe_key(), fake.google_key()
+    slack_bot, slack_app = fake.slack_bot_token(), fake.slack_app_token()
+    twilio = fake.twilio_api_key()
     token, pw = fake.jwt(), fake.db_password()
     api, secret, bearer = fake.api_key(), fake.generic_secret(), fake.bearer_token()
     return [
@@ -43,6 +45,9 @@ def positive_cases():
         ("github-token", f"GITHUB_TOKEN={gh}", gh),
         ("github-token", "token: github_pat_" + fake.synthetic(30, "pat", fake.ALNUM + "_"), None),
         ("stripe-secret-key", f'stripe.api_key = "{stripe}"', stripe),
+        ("slack-token", f'SLACK_BOT_TOKEN = "{slack_bot}"', slack_bot),
+        ("slack-token", f"app_token: {slack_app}", slack_app),
+        ("twilio-api-key", f'TWILIO_API_KEY = "{twilio}"', twilio),
         ("google-api-key", f"GOOGLE_KEY: {google}", google),
         ("jwt", f'const session = "{token}";', token),
         ("private-key", fake.private_key_header(), None),
@@ -83,6 +88,14 @@ def test_detects_and_masks(rule_id, line, secret):
         ("github-token", "ghp_short"),
         ("stripe-secret-key", "sk_test_" + fake.synthetic(24, "stripe-test")),
         ("stripe-secret-key", "pk_live_" + fake.synthetic(24, "stripe-pub")),
+        ("slack-token", "xoxb-" + "X" * 16),
+        ("slack-token", "xoxb-short"),
+        ("slack-token", "xoxq-" + fake.synthetic(24, "not-a-slack-prefix")),
+        ("twilio-api-key", "SK" + "a" * 32),
+        # Stripe format, not Twilio:
+        ("twilio-api-key", "sk_test_" + fake.synthetic(24, "not-twilio")),
+        # account SID, not secret:
+        ("twilio-api-key", "AC" + fake.synthetic(32, "account-sid", fake.HEX)),
         ("google-api-key", "AIza" + "A" * 35),
         ("jwt", "eyJhbGciOi.eyJzdWIiOi.abcdefghijkl"),  # header is not valid base64 JSON
         ("private-key", "-----BEGIN PUBLIC KEY-----"),
@@ -143,7 +156,14 @@ def test_keyword_prefilter_skips_unrelated_lines():
 
 
 def test_severity_of_prefixed_credentials_is_high():
-    for rule_id in ("aws-access-key", "github-token", "stripe-secret-key", "private-key"):
+    for rule_id in (
+        "aws-access-key",
+        "github-token",
+        "stripe-secret-key",
+        "private-key",
+        "slack-token",
+        "twilio-api-key",
+    ):
         assert RULES_BY_ID[rule_id].severity is Severity.HIGH
 
 

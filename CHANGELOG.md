@@ -6,6 +6,13 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `slack-token` detector for Slack bot, user, app-level, refresh and workspace tokens
+  (`xoxb-`, `xoxp-`, `xoxa-`, `xoxr-`, `xoxs-`, `xapp-`).
+- `twilio-api-key` detector for Twilio API key SIDs (`SK...`). The account SID is not secret
+  and the auth token has no distinguishing prefix, so neither is detected.
+
 ## [0.1.1] - 2026-09-22
 
 First release published to PyPI.

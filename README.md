@@ -58,7 +58,7 @@ Committed credentials are a common and avoidable cause of security incidents, an
 
 Detection
 
-- Twelve rules: known credential formats (AWS, GitHub, Stripe, Google, JWT, private keys) and contextual rules for database URLs, generic API keys, generic secrets, passwords and authorization tokens.
+- Fourteen rules: known credential formats (AWS, GitHub, Stripe, Slack, Twilio, Google, JWT, private keys) and contextual rules for database URLs, generic API keys, generic secrets, passwords and authorization tokens.
 - Regex combined with Shannon entropy, placeholder and code-reference rejection, structural checks and file-path context.
 - Per-match confidence score, and severity derived from rule and confidence.
 
@@ -138,6 +138,8 @@ The severity column is the rule's maximum severity. A match with low confidence 
 | `aws-secret-key` | high | Values assigned to an AWS secret access key setting | Name context, 40-character value, entropy threshold |
 | `github-token` | high | `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_` and `github_pat_` tokens | Known format; rejects placeholders |
 | `stripe-secret-key` | high | Live-mode `sk_live_` and `rk_live_` keys | Known format; rejects placeholders |
+| `slack-token` | high | Slack bot, user, app-level, refresh and workspace tokens (`xoxb-`, `xoxp-`, `xoxa-`, `xoxr-`, `xoxs-`, `xapp-`) | Known format; rejects placeholders |
+| `twilio-api-key` | high | Twilio API key SID (`SK...`) | Known format; rejects placeholders |
 | `private-key` | high | PEM, OpenSSH and PGP private key headers | Header match; lower confidence when the header is a quoted string being compared against |
 | `database-url` | high | `postgres://`, `mysql://`, `mongodb://`, `redis://` and similar URLs with a password | URL structure; rejects placeholder passwords; localhost hosts score low |
 | `authorization-token` | high | `Authorization: Bearer ...` and similar values | Header context, entropy threshold, placeholder rejection |
@@ -440,7 +442,7 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 
 - Detection is heuristic. Expect some false positives (documentation examples, test data) and some misses: secrets without a recognisable format or variable name, secrets split across lines or assembled at run time, and key material after a private key header.
 - Entropy thresholds are reasoned, not tuned on a labelled corpus, so precision and recall have not been measured. Entropy checks can miss low-entropy real secrets and flag high-entropy identifiers.
-- HTTP auth coverage is limited to `Bearer` and `token` values; Basic credentials are not detected. There are no detectors yet for Slack, Twilio, npm, PyPI, Azure or GCP service-account keys.
+- HTTP auth coverage is limited to `Bearer` and `token` values; Basic credentials are not detected. There are no detectors yet for npm, PyPI, Azure or GCP service-account keys. Twilio's Account SID (not secret) and Auth Token (no distinguishing prefix, so not reliably matchable) are not detected, only the API key SID.
 - Baseline entries are tied to the file path, so a renamed file resurfaces its findings until the baseline is regenerated.
 - UTF-16 files are treated as binary. Nested `.gitignore` files are only honoured inside Git repositories.
 - History scanning ignores merge-commit diffs (as `git log -p` does) and does not follow file renames beyond the lines each commit actually changed. It has not been run on very large repositories.
@@ -449,7 +451,7 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 
 ## Roadmap
 
-- More token formats (Slack, Twilio, npm, PyPI, Azure, GCP).
+- More token formats (npm, PyPI, Azure, GCP).
 - Parallel file scanning for very large trees.
 
 ## Development

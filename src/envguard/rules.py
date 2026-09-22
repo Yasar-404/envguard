@@ -221,6 +221,39 @@ RULES: tuple[Rule, ...] = (
         keep_prefix=8,
     ),
     Rule(
+        id="slack-token",
+        name="Slack Token",
+        description="Slack bot, user, app-level, refresh or workspace access token.",
+        severity=Severity.HIGH,
+        remediation=(
+            "Revoke the token from the app's OAuth & Permissions page (App-Level Tokens for "
+            "xapp- tokens) at api.slack.com/apps and issue a replacement. Store it in your "
+            "deployment's secret store, not in the repository."
+        ),
+        pattern=re.compile(
+            r"(?<![A-Za-z0-9_-])(?P<secret>xox[baprs]-[0-9A-Za-z-]{10,72}"
+            r"|xapp-\d-[A-Z0-9]+-\d+-[a-f0-9]{6,64})(?![A-Za-z0-9_-])"
+        ),
+        keywords=("xoxb-", "xoxp-", "xoxa-", "xoxr-", "xoxs-", "xapp-"),
+        score=_known_format(0.95),
+        keep_prefix=5,
+    ),
+    Rule(
+        id="twilio-api-key",
+        name="Twilio API Key",
+        description="Twilio API key SID (the key's secret half has no recognisable format).",
+        severity=Severity.HIGH,
+        remediation=(
+            "Delete the API key in the Twilio console (Account > API keys & tokens) and "
+            "create a replacement. The paired secret is shown only once at creation and "
+            "cannot be recovered, so a new key and secret must be issued together."
+        ),
+        pattern=re.compile(r"(?<![A-Za-z0-9])(?P<secret>SK[0-9a-fA-F]{32})(?![A-Za-z0-9])"),
+        keywords=("sk",),
+        score=_known_format(0.9),
+        keep_prefix=2,
+    ),
+    Rule(
         id="google-api-key",
         name="Google API Key",
         description="Google API key (AIza prefix).",
