@@ -254,6 +254,40 @@ RULES: tuple[Rule, ...] = (
         keep_prefix=2,
     ),
     Rule(
+        id="npm-token",
+        name="npm Access Token",
+        description=(
+            "npm access token (npm_ prefix). Legacy UUID-style tokens have no "
+            "distinguishing format and are not detected."
+        ),
+        severity=Severity.HIGH,
+        remediation=(
+            "Revoke the token at npmjs.com (Access Tokens in account settings) and create a "
+            "replacement scoped to only what CI needs. Store it in your CI secret store, not "
+            "in the repository."
+        ),
+        pattern=re.compile(r"(?<![A-Za-z0-9_])(?P<secret>npm_[A-Za-z0-9]{36})(?![A-Za-z0-9_])"),
+        keywords=("npm_",),
+        score=_known_format(0.95),
+        keep_prefix=4,
+    ),
+    Rule(
+        id="azure-storage-key",
+        name="Azure Storage Account Key",
+        description="Azure Storage account key embedded in a connection string (AccountKey=...).",
+        severity=Severity.HIGH,
+        remediation=(
+            "Rotate the key in the Azure portal (Storage account > Access keys > Rotate key) "
+            "and update every application using it. Prefer a managed identity or Azure Key "
+            "Vault over embedding the key."
+        ),
+        pattern=re.compile(
+            r"AccountKey=(?P<secret>[A-Za-z0-9+/]{86}==)(?![A-Za-z0-9+/=])", re.IGNORECASE
+        ),
+        keywords=("accountkey=",),
+        score=_known_format(0.9),
+    ),
+    Rule(
         id="google-api-key",
         name="Google API Key",
         description="Google API key (AIza prefix).",

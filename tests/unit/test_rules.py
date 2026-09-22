@@ -35,6 +35,7 @@ def positive_cases():
     gh, stripe, google = fake.github_token(), fake.stripe_key(), fake.google_key()
     slack_bot, slack_app = fake.slack_bot_token(), fake.slack_app_token()
     twilio = fake.twilio_api_key()
+    npm, azure = fake.npm_token(), fake.azure_storage_key()
     token, pw = fake.jwt(), fake.db_password()
     api, secret, bearer = fake.api_key(), fake.generic_secret(), fake.bearer_token()
     return [
@@ -48,6 +49,15 @@ def positive_cases():
         ("slack-token", f'SLACK_BOT_TOKEN = "{slack_bot}"', slack_bot),
         ("slack-token", f"app_token: {slack_app}", slack_app),
         ("twilio-api-key", f'TWILIO_API_KEY = "{twilio}"', twilio),
+        ("npm-token", f"//registry.npmjs.org/:_authToken={npm}", npm),
+        ("npm-token", f'NPM_TOKEN = "{npm}"', npm),
+        (
+            "azure-storage-key",
+            f"AZURE_STORAGE_CONNECTION_STRING="
+            f"DefaultEndpointsProtocol=https;AccountName=acct;AccountKey={azure};"
+            f"EndpointSuffix=core.windows.net",
+            azure,
+        ),
         ("google-api-key", f"GOOGLE_KEY: {google}", google),
         ("jwt", f'const session = "{token}";', token),
         ("private-key", fake.private_key_header(), None),
@@ -96,6 +106,15 @@ def test_detects_and_masks(rule_id, line, secret):
         ("twilio-api-key", "sk_test_" + fake.synthetic(24, "not-twilio")),
         # account SID, not secret:
         ("twilio-api-key", "AC" + fake.synthetic(32, "account-sid", fake.HEX)),
+        ("npm-token", "npm_" + "X" * 36),
+        ("npm-token", "npm_short"),
+        ("npm-token", "NPM_TOKEN = os.environ['NPM_TOKEN']"),
+        ("azure-storage-key", "AccountKey=" + "X" * 86 + "=="),
+        # too short: a real key is exactly 86 base64 chars plus '=='
+        (
+            "azure-storage-key",
+            "AccountKey=" + fake.synthetic(40, "short-azure", fake.BASE64) + "==",
+        ),
         ("google-api-key", "AIza" + "A" * 35),
         ("jwt", "eyJhbGciOi.eyJzdWIiOi.abcdefghijkl"),  # header is not valid base64 JSON
         ("private-key", "-----BEGIN PUBLIC KEY-----"),
@@ -163,6 +182,8 @@ def test_severity_of_prefixed_credentials_is_high():
         "private-key",
         "slack-token",
         "twilio-api-key",
+        "npm-token",
+        "azure-storage-key",
     ):
         assert RULES_BY_ID[rule_id].severity is Severity.HIGH
 

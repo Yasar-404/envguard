@@ -68,6 +68,14 @@ def twilio_api_key() -> str:
     return "SK" + synthetic(32, "twilio-api-key", HEX)
 
 
+def npm_token() -> str:
+    return "npm_" + synthetic(36, "npm-token")
+
+
+def azure_storage_key() -> str:
+    return synthetic(86, "azure-storage-key", BASE64) + "=="
+
+
 def _b64url(payload: dict[str, str]) -> str:
     raw = json.dumps(payload).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()

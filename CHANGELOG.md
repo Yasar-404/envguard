@@ -6,6 +6,13 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `npm-token` detector for npm access tokens (`npm_...`).
+- `azure-storage-key` detector for Azure Storage account keys embedded in a connection string
+  (`AccountKey=...`). Azure AD / service principal client secrets have no fixed format and are
+  not detected directly.
+
 ## [0.1.2] - 2026-09-22
 
 ### Added
