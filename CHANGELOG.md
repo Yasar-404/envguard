@@ -6,6 +6,10 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-22
+
+First release published to PyPI.
+
 ### Changed
 
 - The distribution is now named `envguard-scan`, so that it can be published to PyPI, where
@@ -40,5 +44,6 @@ First release. Alpha quality: see the known limitations in the README.
   hook through a real `git commit` and through the pre-commit framework (`pre-commit run`,
   `try-repo`, `pre-commit install`). CI runs on Ubuntu and Windows with Python 3.11 to 3.13.
 
-[Unreleased]: https://github.com/Yasar-404/envguard/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Yasar-404/envguard/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Yasar-404/envguard/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Yasar-404/envguard/releases/tag/v0.1.0
