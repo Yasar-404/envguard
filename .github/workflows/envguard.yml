@@ -1,6 +1,6 @@
 # Runs EnvGuard against this repository. Copy it to your own project and replace
 # `pip install .` with:
-#   python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.0"
+#   python -m pip install envguard-scan
 name: EnvGuard
 
 on:

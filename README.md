@@ -3,6 +3,7 @@
 A lightweight Python CLI that detects exposed secrets, API keys, tokens and credentials in source code and Git repositories.
 
 [![CI](https://github.com/Yasar-404/envguard/actions/workflows/ci.yml/badge.svg)](https://github.com/Yasar-404/envguard/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/envguard-scan)](https://pypi.org/project/envguard-scan/)
 ![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 [![License: MIT](https://img.shields.io/github/license/Yasar-404/envguard)](LICENSE)
 
@@ -79,23 +80,17 @@ Developer workflow
 
 EnvGuard requires Python 3.11 or newer. Git features need the `git` executable on the `PATH`.
 
-EnvGuard is not published on PyPI yet. Install the tagged release directly from GitHub:
+```bash
+python -m pip install envguard-scan
+```
+
+The command and the import package are both named `envguard`; only the distribution on PyPI is called `envguard-scan`, because `envguard` is taken by an unrelated project. Do not run `pip install envguard`: that installs different software. If you installed v0.1.0, which briefly used the distribution name `envguard`, run `pip uninstall envguard` before installing `envguard-scan`.
+
+To install a specific version, a pre-release from `main`, or a clone to work on the source, see [Development](#development) or install directly from GitHub:
 
 ```bash
 python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.1"
 ```
-
-or from a clone:
-
-```bash
-git clone --branch v0.1.1 https://github.com/Yasar-404/envguard.git
-cd envguard
-python -m pip install .
-```
-
-Leave out the tag to install the current `main` branch.
-
-The command and the import package are both named `envguard`. The distribution is named `envguard-scan`, which is the name it will have on PyPI once published. If you installed v0.1.0, which used the distribution name `envguard`, run `pip uninstall envguard` before installing `envguard-scan`. Do not run `pip install envguard`: that name on PyPI belongs to an unrelated project and installs different software.
 
 ## Quick start
 
@@ -303,11 +298,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.1"
+      - run: python -m pip install envguard-scan==0.1.1
       - run: envguard scan . --history
 ```
 
-The install is pinned to the release tag so CI is reproducible; remove `@v0.1.1` to track `main`. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
+The install is pinned to a version so CI is reproducible; drop `==0.1.1` to track the latest release. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
 
 To upload results to GitHub code scanning, see [SARIF output](#sarif).
 
@@ -377,7 +372,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.1"
+      - run: python -m pip install envguard-scan==0.1.1
       # Exit code 1 (findings) should not stop the upload; anything else is a real error.
       - run: envguard scan . --format sarif > envguard.sarif || test $? -eq 1
       - uses: github/codeql-action/upload-sarif@v3
@@ -454,7 +449,6 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 
 ## Roadmap
 
-- Publishing to PyPI as `envguard-scan`, since the name `envguard` is taken by an unrelated project.
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP).
 - Parallel file scanning for very large trees.
 
