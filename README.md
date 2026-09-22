@@ -7,7 +7,7 @@ A lightweight Python CLI that detects exposed secrets, API keys, tokens and cred
 ![Python 3.11 | 3.12 | 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 [![License: MIT](https://img.shields.io/github/license/Yasar-404/envguard)](LICENSE)
 
-Status: alpha. The current release is [v0.1.1](https://github.com/Yasar-404/envguard/releases/tag/v0.1.1); see the [changelog](CHANGELOG.md).
+Status: alpha. The current release is [v0.1.2](https://github.com/Yasar-404/envguard/releases/tag/v0.1.2); see the [changelog](CHANGELOG.md).
 
 ```text
 $ envguard scan ./project
@@ -89,7 +89,7 @@ The command and the import package are both named `envguard`; only the distribut
 To install a specific version, a pre-release from `main`, or a clone to work on the source, see [Development](#development) or install directly from GitHub:
 
 ```bash
-python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.1"
+python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.2"
 ```
 
 ## Quick start
@@ -239,7 +239,7 @@ Command-line `--severity` overrides `min_severity`, and `--exclude` adds to `exc
 ```yaml
 repos:
   - repo: https://github.com/Yasar-404/envguard
-    rev: v0.1.1
+    rev: v0.1.2
     hooks:
       - id: envguard
 ```
@@ -300,11 +300,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install envguard-scan==0.1.1
+      - run: python -m pip install envguard-scan==0.1.2
       - run: envguard scan . --history
 ```
 
-The install is pinned to a version so CI is reproducible; drop `==0.1.1` to track the latest release. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
+The install is pinned to a version so CI is reproducible; drop `==0.1.2` to track the latest release. Logs contain only masked values. [.github/workflows/envguard.yml](.github/workflows/envguard.yml) is the equivalent workflow this repository runs against itself, installing from the checkout. Use `--history` only with `fetch-depth: 0`; drop it for a working-tree-only scan.
 
 To upload results to GitHub code scanning, see [SARIF output](#sarif).
 
@@ -374,7 +374,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install envguard-scan==0.1.1
+      - run: python -m pip install envguard-scan==0.1.2
       # Exit code 1 (findings) should not stop the upload; anything else is a real error.
       - run: envguard scan . --format sarif > envguard.sarif || test $? -eq 1
       - uses: github/codeql-action/upload-sarif@v3
