@@ -6,6 +6,14 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The distribution is now named `envguard-scan`, so that it can be published to PyPI, where
+  `envguard` belongs to an unrelated project. The command (`envguard`) and the import package
+  (`envguard`) are unchanged. If you installed v0.1.0 from GitHub, run `pip uninstall envguard`
+  before installing `envguard-scan`. Both provide the same files, pip lets them coexist, and
+  uninstalling `envguard` afterwards removes the command and module that `envguard-scan` needs.
+
 ## [0.1.0] - 2026-09-21
 
 First release. Alpha quality: see the known limitations in the README.

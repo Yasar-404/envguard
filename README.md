@@ -79,7 +79,7 @@ Developer workflow
 
 EnvGuard requires Python 3.11 or newer. Git features need the `git` executable on the `PATH`.
 
-EnvGuard is not published on PyPI. Install the tagged release directly from GitHub:
+EnvGuard is not published on PyPI yet. Install the tagged release directly from GitHub:
 
 ```bash
 python -m pip install "git+https://github.com/Yasar-404/envguard.git@v0.1.0"
@@ -95,7 +95,7 @@ python -m pip install .
 
 Leave out the tag to install the current `main` branch.
 
-Do not run `pip install envguard`. That name on PyPI belongs to an unrelated project and installs different software.
+The command and the import package are both named `envguard`. The distribution is named `envguard-scan` on `main` and in later releases (v0.1.0 itself is named `envguard`), and that is the name it will have on PyPI. If you installed v0.1.0, run `pip uninstall envguard` before installing a later version. Do not run `pip install envguard`: that name on PyPI belongs to an unrelated project and installs different software.
 
 ## Quick start
 
@@ -454,7 +454,7 @@ CI (GitHub Actions) runs on Ubuntu and Windows with Python 3.11, 3.12 and 3.13: 
 
 ## Roadmap
 
-- Publishing to PyPI. This needs a different distribution name, because `envguard` is taken.
+- Publishing to PyPI as `envguard-scan`, since the name `envguard` is taken by an unrelated project.
 - More token formats (Slack, Twilio, npm, PyPI, Azure, GCP).
 - Parallel file scanning for very large trees.
 
